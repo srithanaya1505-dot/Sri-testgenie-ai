@@ -4,7 +4,7 @@ const Groq = require("groq-sdk");
 const path = require("path");
 
 const app = express();
-const groq = new Groq({ apiKey: "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" });
+const groq = new Groq({ apiKey: "process.env.GROQ_API_KEY" });
 
 app.use(cors());
 app.use(express.json());

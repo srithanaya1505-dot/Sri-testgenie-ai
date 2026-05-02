@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sri's TestGenie AI</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #0f0f1a; color: white; min-height: 100vh; }
+        .header { background: linear-gradient(135deg, #6c63ff, #3ecfcf); padding: 30px; text-align: center; }
+        .header h1 { font-size: 2.5em; }
+        .header p { font-size: 1.1em; margin-top: 10px; opacity: 0.9; }
+        .container { max-width: 800px; margin: 40px auto; padding: 20px; }
+        .input-box { background: #1a1a2e; border-radius: 15px; padding: 30px; margin-bottom: 20px; }
+        .input-box label { font-size: 1.1em; margin-bottom: 10px; display: block; color: #3ecfcf; }
+        .input-box textarea { width: 100%; height: 100px; background: #16213e; border: 1px solid #6c63ff; border-radius: 10px; padding: 15px; color: white; font-size: 1em; resize: none; }
+        .btn { background: linear-gradient(135deg, #6c63ff, #3ecfcf); color: white; border: none; padding: 15px 40px; border-radius: 25px; font-size: 1.1em; cursor: pointer; width: 100%; margin-top: 15px; }
+        .btn:hover { opacity: 0.9; }
+        .results { background: #1a1a2e; border-radius: 15px; padding: 30px; white-space: pre-wrap; line-height: 1.8; display: none; }
+        .loading { text-align: center; padding: 20px; display: none; color: #3ecfcf; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧪 Sri's TestGenie AI</h1>
+        <p>Generate professional test cases instantly using AI</p>
+    </div>
+    <div class="container">
+        <div class="input-box">
+            <label>Describe the feature you want to test:</label>
+            <textarea id="feature" placeholder="Example: Login page with email and password..."></textarea>
+            <label>Select Test Type:</label>
+            <select id="testType">
+                <option value="unit">Unit Testing</option>
+                <option value="api">API Testing</option>
+                <option value="ui">UI Testing</option>
+                <option value="regression">Regression Testing</option>
+            </select>
+            <button class="btn" onclick="generate()">Generate Test Cases</button>
+            <button class="btn"id="exportBtn" onclick="exportPDF()" style="display:none;margin: top 10px;background:linear-gradient(135deg,#00b09b,#96c93d);">✨ Export as PDF
+            </button>
+        </div>
+        <div class="loading" id="loading">⏳ Generating test cases...</div>
+        <div class="results" id="results"></div>
+        <div class="input-box" id="historySection" style="display:none;margin-top: 20px;">
+            <h3 style="color: #3ecfcf;margin: bottom 15px;">History<button onclick="clearHistory()" style="font: size 0.7em; background:red; color:white; border:none; padding: 5px 10px; border-radius:5px; cursor:pointer; margin: left 10px;">Clear</button></h3>
+            <div id="historyList"></div>
+        </div>
+    </div>
+    <script>
+        async function generate() {
+            const feature = document.getElementById("feature").value;
+            if (!feature) { alert("Please describe a feature!"); return; }
+            document.getElementById("loading").style.display = "block";
+            document.getElementById("results").style.display = "none";
+            const response = await fetch("http://localhost:3000/generate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ feature,testType: document.getElementById("testType").value })
+            });
+            const data = await response.json();
+            document.getElementById("loading").style.display = "none";
+            document.getElementById("exportBtn").style.display = "block";
+            document.getElementById("results").style.display = "block";
+            saveHistory(feature,document.getElementById("testType").value,data.testCases);
+            document.getElementById("results").innerText = data.testCases .replace(/#{1,4}\s*/g, '');
+        }
+        function exportPDF(){
+                const results = document.getElementById("results").innerText;
+                const win = window.open("","_blank");
+                win.document.write("<pre>" + results + "</pre>");
+                win.print();
+            }
+            function saveHistory(feature, testType, result) {
+  const history = JSON.parse(localStorage.getItem("history") || "[]");
+  history.unshift({ feature, testType, result, date: new Date().toLocaleString() });
+  localStorage.setItem("history", JSON.stringify(history));
+  loadHistory();
+}
+
+function loadHistory() {
+  const history = JSON.parse(localStorage.getItem("history") || "[]");
+  if (history.length === 0) return;
+  document.getElementById("historySection").style.display = "block";
+  document.getElementById("historyList").innerHTML = history.map((h, i) => `
+    <div style="padding:10px; margin-bottom:10px; background:#16213e; border-radius:8px; cursor:pointer;" onclick="loadFromHistory(${i})">
+      <strong style="color:#3ecfcf;">${h.testType}</strong> — ${h.feature} <br>
+      <small style="color:#aaa;">${h.date}</small>
+    </div>
+  `).join("");
+}
+
+function loadFromHistory(index) {
+  const history = JSON.parse(localStorage.getItem("history") || "[]");
+  document.getElementById("results").innerText = history[index].result;
+  document.getElementById("results").style.display = "block";
+  document.getElementById("exportBtn").style.display = "block";
+}
+function clearHistory(){
+    localStorage.removeItem("history");
+    document.getElementById("historySection").style.display = "none";
+    document.getElementById("historyList").innerHTML = "";
+}
+    </script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+{
+  "name": "testgenie-ai",
+  "version": "1.0.0",
+  "description": "AI-powered test case generator for web applications",
+  "private": true,
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "echo \"No tests yet\""
+  },
+  "keywords": [
+    "testgenie",
+    "qa",
+    "ai",
+    "express"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^16.4.5",
+    "express": "^5.2.1",
+    "groq-sdk": "^1.1.2"
+  }
+}

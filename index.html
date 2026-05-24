@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sri's TestGenie AI</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #0f0f1a; color: white; min-height: 100vh; }
+        .header { background: linear-gradient(135deg, #6c63ff, #3ecfcf); padding: 30px; text-align: center; }
+        .header h1 { font-size: 2.5em; }
+        .header p { font-size: 1.1em; margin-top: 10px; opacity: 0.9; }
+        .container { max-width: 800px; margin: 40px auto; padding: 20px; }
+        .input-box { background: #1a1a2e; border-radius: 15px; padding: 30px; margin-bottom: 20px; }
+        .input-box label { font-size: 1.1em; margin-bottom: 10px; display: block; color: #3ecfcf; }
+        .input-box textarea { width: 100%; height: 100px; background: #16213e; border: 1px solid #6c63ff; border-radius: 10px; padding: 15px; color: white; font-size: 1em; resize: none; }
+        .input-box select { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #6c63ff; background: #16213e; color: white; font-size: 1em; }
+        .btn { background: linear-gradient(135deg, #6c63ff, #3ecfcf); color: white; border: none; padding: 15px 40px; border-radius: 25px; font-size: 1.1em; cursor: pointer; width: 100%; margin-top: 15px; }
+        .btn:hover { opacity: 0.9; }
+        .btn-secondary { background: linear-gradient(135deg, #00b09b, #96c93d); margin-top: 10px; }
+        .results { background: #1a1a2e; border-radius: 15px; padding: 30px; white-space: pre-wrap; line-height: 1.8; display: none; }
+        .loading { text-align: center; padding: 20px; display: none; color: #3ecfcf; }
+        .error { display: none; background: rgba(255, 88, 88, 0.15); border: 1px solid #ff5858; color: #ffd8d8; padding: 15px; border-radius: 12px; margin-bottom: 20px; }
+        .history-title { color: #3ecfcf; margin-bottom: 15px; }
+        .history-clear { font-size: 0.7em; background: red; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; margin-left: 10px; }
+        .history-item { padding: 10px; margin-bottom: 10px; background: #16213e; border-radius: 8px; cursor: pointer; }
+        .history-item small { color: #aaa; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧪 Sri's TestGenie AI</h1>
+        <p>Generate professional test cases instantly using AI</p>
+    </div>
+    <div class="container">
+        <div class="input-box">
+            <label for="feature">Describe the feature you want to test:</label>
+            <textarea id="feature" placeholder="Example: Login page with email and password..."></textarea>
+            <label for="testType">Select Test Type:</label>
+            <select id="testType">
+                <option value="unit">Unit Testing</option>
+                <option value="api">API Testing</option>
+                <option value="ui">UI Testing</option>
+                <option value="regression">Regression Testing</option>
+            </select>
+            <button class="btn" type="button" onclick="generate()">Generate Test Cases</button>
+            <button class="btn btn-secondary" id="exportBtn" type="button" onclick="exportPDF()" style="display:none;">✨ Export as PDF</button>
+        </div>
+
+        <div class="error" id="errorBox"></div>
+        <div class="loading" id="loading">⏳ Generating test cases...</div>
+        <div class="results" id="results"></div>
+
+        <div class="input-box" id="historySection" style="display:none; margin-top: 20px;">
+            <h3 class="history-title">History<button class="history-clear" type="button" onclick="clearHistory()">Clear</button></h3>
+            <div id="historyList"></div>
+        </div>
+    </div>
+
+    <script>
+        const loadingEl = document.getElementById("loading");
+        const resultsEl = document.getElementById("results");
+        const exportBtn = document.getElementById("exportBtn");
+        const errorBox = document.getElementById("errorBox");
+        const historySection = document.getElementById("historySection");
+        const historyList = document.getElementById("historyList");
+
+        function showError(message) {
+            errorBox.textContent = message;
+            errorBox.style.display = "block";
+        }
+
+        function clearError() {
+            errorBox.textContent = "";
+            errorBox.style.display = "none";
+        }
+
+        function setLoading(isLoading) {
+            loadingEl.style.display = isLoading ? "block" : "none";
+        }
+
+        async function generate() {
+            const feature = document.getElementById("feature").value.trim();
+            const testType = document.getElementById("testType").value;
+
+            clearError();
+
+            if (!feature) {
+                showError("Please describe a feature before generating test cases.");
+                return;
+            }
+
+            setLoading(true);
+            resultsEl.style.display = "none";
+            exportBtn.style.display = "none";
+
+            try {
+                const response = await fetch("/generate", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ feature, testType })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    const message = data.details ? `${data.error}: ${data.details}` : (data.error || "Something went wrong while generating your test cases.");
+                    throw new Error(message);
+                }
+
+                const formattedResults = data.testCases.replace(/#{1,4}\s*/g, "");
+                resultsEl.innerText = formattedResults;
+                resultsEl.style.display = "block";
+                exportBtn.style.display = "block";
+                saveHistory(feature, testType, formattedResults);
+            } catch (error) {
+                showError(error.message || "Unable to generate test cases right now.");
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        function exportPDF() {
+            const results = resultsEl.innerText;
+
+            if (!results) {
+                showError("There is no test case output to export.");
+                return;
+            }
+
+            const win = window.open("", "_blank");
+
+            if (!win) {
+                showError("Popup blocked. Please allow popups to export the PDF.");
+                return;
+            }
+
+            win.document.write("<pre>" + results + "</pre>");
+            win.print();
+        }
+
+        function saveHistory(feature, testType, result) {
+            const history = JSON.parse(localStorage.getItem("history") || "[]");
+            history.unshift({ feature, testType, result, date: new Date().toLocaleString() });
+            localStorage.setItem("history", JSON.stringify(history));
+            loadHistory();
+        }
+
+        function loadHistory() {
+            const history = JSON.parse(localStorage.getItem("history") || "[]");
+            historySection.style.display = history.length ? "block" : "none";
+
+            if (!history.length) {
+                historyList.innerHTML = "";
+                return;
+            }
+
+            historyList.innerHTML = history.map((item, index) => `
+                <div class="history-item" onclick="loadFromHistory(${index})">
+                    <strong style="color:#3ecfcf;">${item.testType}</strong> — ${item.feature}
+                    <br>
+                    <small>${item.date}</small>
+                </div>
+            `).join("");
+        }
+
+        function loadFromHistory(index) {
+            const history = JSON.parse(localStorage.getItem("history") || "[]");
+            const entry = history[index];
+
+            if (!entry) {
+                return;
+            }
+
+            resultsEl.innerText = entry.result;
+            resultsEl.style.display = "block";
+            exportBtn.style.display = "block";
+            clearError();
+        }
+
+        function clearHistory() {
+            localStorage.removeItem("history");
+            loadHistory();
+        }
+
+        loadHistory();
+    </script>
+</body>
+</html>
